@@ -14,8 +14,6 @@ A `kubectl` extension to select from local config via a TUI.
 go get github.com/n3wscott/kubectl-select
 ```
 
-`kubectl-select` is meant to be installed in a `PATH` location. 
-
 To update your installation:
 
 ```shell
@@ -31,5 +29,6 @@ kubectl select
 ```
 
 This will show a menu driven off the currently configured Kubernetes clients.
+
 Select one by pressing `ENTER`. To cancel, `ESC` or `q`.
 
