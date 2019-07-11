@@ -91,6 +91,11 @@ func main() {
 	}
 
 	table.OnItemActivated(func(t *tui.Table) {
+		if t.Selected() == 0 {
+			ui.Quit()
+			fmt.Printf("no selection; context unchanged\n")
+			return
+		}
 		_, err := cmd(fmt.Sprintf("kubectl config use-context %s", cfg.Contexts[t.Selected()-1].Name))
 		if err != nil {
 			panic(err)
