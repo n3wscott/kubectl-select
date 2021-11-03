@@ -19,8 +19,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/marcusolsson/tui-go"
-	"log"
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 	"os/exec"
 	"strings"
 )
@@ -61,69 +61,50 @@ func getConfig() *K8sConfig {
 }
 
 func main() {
-
 	cfg := getConfig()
 
-	table := tui.NewTable(0, 0)
-	table.SetColumnStretch(0, 1)
-	table.SetColumnStretch(1, 4)
-	table.SetColumnStretch(2, 4)
-	table.SetColumnStretch(3, 4)
-	table.SetFocused(true)
+	app := tview.NewApplication()
+	list := tview.NewList()
+	list.SetBorder(true).SetTitle("Select a Context")
 
-	table.AppendRow(
-		tui.NewLabel("SELECTED"),
-		tui.NewLabel("NAME"),
-		tui.NewLabel("CLUSTER"),
-		tui.NewLabel("USER"),
-	)
-
-	for i, c := range cfg.Contexts {
-		selected := ""
-		if c.Name == cfg.CurrentContext {
-			selected = "*"
-			table.Select(i + 1)
-		}
-		table.AppendRow(
-			tui.NewLabel(selected),
-			tui.NewLabel(c.Name),
-			tui.NewLabel(c.Context.Cluster),
-			tui.NewLabel(c.Context.User),
-		)
-	}
-
-	status := tui.NewStatusBar("")
-	status.SetPermanentText(`ESC or 'q' to QUIT`)
-
-	root := tui.NewVBox(
-		table,
-		tui.NewSpacer(),
-		status,
-	)
-
-	ui, err := tui.New(root)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	table.OnItemActivated(func(t *tui.Table) {
-		if t.Selected() == 0 {
-			ui.Quit()
-			fmt.Printf("no selection; context unchanged\n")
-			return
-		}
-		_, err := cmd(fmt.Sprintf("kubectl config use-context %s", cfg.Contexts[t.Selected()-1].Name))
+	doSelect := func(i int) {
+		_, err := cmd(fmt.Sprintf("kubectl config use-context %s", cfg.Contexts[i].Name))
 		if err != nil {
 			panic(err)
 		}
-		ui.Quit()
-		fmt.Printf("selected %s\n", cfg.Contexts[t.Selected()-1].Name)
+		app.Stop()
+		fmt.Printf("selected %s\n", cfg.Contexts[i].Name)
+	}
+
+	shortcut := 'a'
+	for i, c := range cfg.Contexts {
+		selected := ""
+		if c.Name == cfg.CurrentContext {
+			selected = "[current]"
+			// TODO: can we select this ui element?
+		}
+		// TODO: if someone runs shortcut into q, not sure which shortcut item wins.
+		list.AddItem(fmt.Sprintf("%s %s", selected, c.Name), fmt.Sprintf("%s@%s", c.Context.User, c.Context.Cluster), shortcut, func() {
+			i := i
+			doSelect(i)
+		})
+		shortcut++
+	}
+
+	list.AddItem("Quit", "Press `q` or `ESC` to exit", 'q', func() {
+		app.Stop()
 	})
 
-	ui.SetKeybinding("Esc", func() { ui.Quit() })
-	ui.SetKeybinding("q", func() { ui.Quit() })
+	list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEscape {
+			fmt.Printf("no selection; context unchanged\n")
+			app.Stop()
+			return nil
+		}
+		return event
+	})
 
-	if err := ui.Run(); err != nil {
-		log.Fatal(err)
+	if err := app.SetRoot(list, true).SetFocus(list).Run(); err != nil {
+		panic(err)
 	}
 }
