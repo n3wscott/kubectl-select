@@ -19,10 +19,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
 	"os/exec"
 	"strings"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 )
 
 func cmd(cmdLine string) ([]byte, error) {
@@ -84,8 +85,8 @@ func main() {
 			// TODO: can we select this ui element?
 		}
 		// TODO: if someone runs shortcut into q, not sure which shortcut item wins.
+		i := i
 		list.AddItem(fmt.Sprintf("%s %s", selected, c.Name), fmt.Sprintf("%s@%s", c.Context.User, c.Context.Cluster), shortcut, func() {
-			i := i
 			doSelect(i)
 		})
 		shortcut++
